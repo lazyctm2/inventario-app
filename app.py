@@ -67,6 +67,24 @@ c.execute("CREATE INDEX IF NOT EXISTS idx_movimientos_producto ON movimientos(pr
 c.execute("CREATE INDEX IF NOT EXISTS idx_movimientos_fecha ON movimientos(fecha)")
 c.execute("CREATE INDEX IF NOT EXISTS idx_movimientos_tipo ON movimientos(tipo)")
 
+# Crear tabla de configuración con valores por defecto
+c.execute("""
+CREATE TABLE IF NOT EXISTS configuracion (
+    clave TEXT PRIMARY KEY,
+    valor TEXT NOT NULL
+)
+""")
+
+# Insertar configuraciones por defecto si no existen
+defaults = {
+    "stock_minimo": "5",
+    "tema": "light",
+    "moneda": "USD"
+}
+
+for k, v in defaults.items():
+    c.execute("INSERT OR IGNORE INTO configuracion (clave, valor) VALUES (?, ?)", (k, v))
+
 conn.commit()
 
 # ==================== DATABASE MIGRATIONS ====================
@@ -384,32 +402,6 @@ Valor Total: ${(row['cantidad'] * row['precio']):,.2f}
     return reporte.encode('utf-8')
 
 # ==================== CONFIGURACIÓN ====================
-def crear_tabla_configuracion():
-    """Crea tabla de configuración"""
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS configuracion (
-        clave TEXT PRIMARY KEY,
-        valor TEXT NOT NULL
-    )
-    """)
-    
-    # Configuraciones por defecto
-    defaults = {
-        "stock_minimo": "5",
-        "tema": "light",
-        "moneda": "USD"
-    }
-    
-    for k, v in defaults.items():
-        try:
-            c.execute("INSERT INTO configuracion (clave, valor) VALUES (?, ?)", (k, v))
-        except sqlite3.IntegrityError:
-            pass
-    
-    conn.commit()
-
-crear_tabla_configuracion()
-
 def obtener_config(clave):
     """Obtiene valor de configuración"""
     resultado = c.execute("SELECT valor FROM configuracion WHERE clave = ?", (clave,)).fetchone()
