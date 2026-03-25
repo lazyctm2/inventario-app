@@ -107,6 +107,10 @@ def migrar_base_datos():
         c.execute("PRAGMA table_info(movimientos)")
         columns = [row[1] for row in c.fetchall()]
         
+        if "descripcion" not in columns:
+            c.execute("ALTER TABLE movimientos ADD COLUMN descripcion TEXT")
+            st.info("✅ Migración: Agregada columna 'descripcion' a tabla movimientos")
+        
         if "usuario" not in columns:
             c.execute("ALTER TABLE movimientos ADD COLUMN usuario TEXT")
             st.info("✅ Migración: Agregada columna 'usuario' a tabla movimientos")
