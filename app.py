@@ -4,11 +4,12 @@ import sqlite3
 from datetime import datetime, timedelta
 import os
 from io import BytesIO, StringIO
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
-from reportlab.lib.units import inch
+# import reportlab components - temporarily disabled for deployment
+# from reportlab.lib.pagesizes import letter, A4
+# from reportlab.lib import colors
+# from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+# from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+# from reportlab.lib.units import inch
 import hashlib
 
 # ==================== CONFIG ====================
@@ -283,76 +284,40 @@ def calcular_analisis_abc():
 
 # ==================== REPORTES PDF ====================
 def generar_pdf_inventario():
-    """Genera PDF con reporte de inventario"""
+    """Genera reporte de inventario en formato TXT (temporal)"""
     df = obtener_productos()
     stats = get_estadisticas()
-    
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.5*inch, bottomMargin=0.5*inch)
-    style = getSampleStyleSheet()
-    story = []
-    
-    # Título
-    titulo = Paragraph("<b>REPORTE DE INVENTARIO</b>", style['Title'])
-    story.append(titulo)
-    story.append(Spacer(1, 0.2*inch))
-    
-    # Fecha
-    fecha = Paragraph(f"<b>Fecha:</b> {datetime.now().strftime('%d/%m/%Y %H:%M')}", style['Normal'])
-    story.append(fecha)
-    story.append(Spacer(1, 0.3*inch))
-    
-    # Resumen
-    story.append(Paragraph("<b>RESUMEN EJECUTIVO</b>", style['Heading2']))
-    datos_resumen = [
-        ["Valor Total Inventario", f"${stats.get('valor_total', 0):,.2f}"],
-        ["Stock Total", f"{stats.get('stock_total', 0):,} unidades"],
-        ["Número de Productos", f"{stats.get('num_productos', 0)}"],
-        ["Productos Bajo Stock", f"{stats.get('productos_bajo_stock', 0)}"],
-        ["Ubicaciones", f"{stats.get('ubicaciones', 0)}"]
-    ]
-    
-    tabla_resumen = Table(datos_resumen, colWidths=[3*inch, 2*inch])
-    tabla_resumen.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
-        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ('GRID', (0, 0), (-1, -1), 1, colors.grey)
-    ]))
-    
-    story.append(tabla_resumen)
-    story.append(Spacer(1, 0.3*inch))
-    
-    # Productos
+
+    # Crear contenido del reporte
+    reporte = f"""
+REPORTE DE INVENTARIO - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
+{'='*60}
+
+RESUMEN EJECUTIVO:
+- Valor Total Inventario: ${stats.get('valor_total', 0):,.2f}
+- Stock Total: {stats.get('stock_total', 0):,} unidades
+- Número de Productos: {stats.get('num_productos', 0)}
+- Productos Bajo Stock: {stats.get('productos_bajo_stock', 0)}
+- Ubicaciones: {stats.get('ubicaciones', 0)}
+
+LISTADO DE PRODUCTOS:
+{'-'*60}
+"""
+
     if not df.empty:
-        story.append(Paragraph("<b>LISTADO DE PRODUCTOS</b>", style['Heading2']))
-        
-        df_tabla = df[["id", "nombre", "cantidad", "precio", "ubicacion"]].copy()
-        df_tabla = df_tabla.astype(str)
-        
-        datos = [["ID", "Nombre", "Cantidad", "Precio", "Ubicación"]]
-        for _, row in df_tabla.iterrows():
-            datos.append(list(row))
-        
-        tabla = Table(datos, colWidths=[1*inch, 2*inch, 1*inch, 1*inch, 1.5*inch])
-        tabla.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
-        ]))
-        
-        story.append(tabla)
-    
-    doc.build(story)
-    buffer.seek(0)
-    return buffer
+        for _, row in df.iterrows():
+            reporte += f"""
+ID: {row['id']}
+Nombre: {row['nombre']}
+Cantidad: {int(row['cantidad'])} unid.
+Precio: ${row['precio']:.2f}
+Ubicación: {row['ubicacion']}
+Valor Total: ${(row['cantidad'] * row['precio']):,.2f}
+{'-'*30}
+"""
+
+    # Convertir a bytes
+    return reporte.encode('utf-8')
 
 # ==================== CONFIGURACIÓN ====================
 def crear_tabla_configuracion():
@@ -1002,14 +967,14 @@ DETALLES POR UBICACIÓN:
         
         with tab4:
             if not df.empty:
-                st.write("Generar reporte en PDF")
-                if st.button("📄 Descargar PDF", use_container_width=True):
-                    pdf = generar_pdf_inventario()
+                st.write("Generar reporte en TXT (PDF temporalmente no disponible)")
+                if st.button("📄 Descargar TXT", use_container_width=True):
+                    txt = generar_pdf_inventario()
                     st.download_button(
-                        label="⬇️ Descargar PDF",
-                        data=pdf,
-                        file_name=f"reporte_{datetime.now().strftime('%Y%m%d')}.pdf",
-                        mime="application/pdf",
+                        label="⬇️ Descargar TXT",
+                        data=txt,
+                        file_name=f"reporte_{datetime.now().strftime('%Y%m%d')}.txt",
+                        mime="text/plain",
                         use_container_width=True
                     )
 
