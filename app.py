@@ -241,7 +241,7 @@ def actualizar_stock(producto_id, cantidad, descripcion=""):
     """Actualiza el stock con validación de cantidad negativa"""
     try:
         df_producto = obtener_producto_por_id(producto_id)
-        if df_producto.empty:
+        if df_producto.empty or len(df_producto) == 0:
             return False, "❌ Producto no encontrado"
         
         stock_actual = df_producto["cantidad"].iloc[0]
@@ -700,11 +700,29 @@ elif pagina == "🔄 Movimientos":
             )
         
         with col2:
-            producto_actual = df[df["id"] == producto_id].iloc[0]
-            st.metric("Stock actual", f"{int(producto_actual['cantidad'])} unid.")
+            # Validar que el producto existe
+            producto_filtrado = df[df["id"] == producto_id]
+            if producto_filtrado.empty:
+                st.error(f"❌ Producto con ID '{producto_id}' no encontrado")
+                st.stop()
+            
+            producto_actual = producto_filtrado.iloc[0]
+            
+            # Validar que cantidad sea un valor numérico válido
+            try:
+                cantidad_actual = int(producto_actual['cantidad'])
+                st.metric("Stock actual", f"{cantidad_actual} unid.")
+            except (ValueError, TypeError):
+                st.metric("Stock actual", "N/A")
+                st.warning("⚠️ Cantidad inválida en base de datos")
         
         with col3:
-            st.metric("Precio", f"${producto_actual['precio']:.2f}")
+            try:
+                precio_actual = float(producto_actual['precio'])
+                st.metric("Precio", f"${precio_actual:.2f}")
+            except (ValueError, TypeError):
+                st.metric("Precio", "N/A")
+                st.warning("⚠️ Precio inválido en base de datos")
         
         st.divider()
         
@@ -883,7 +901,13 @@ elif pagina == "⚙️ Gestión":
                 key="gestion_producto"
             )
             
-            producto = df[df["id"] == producto_id].iloc[0]
+            # Validar que el producto existe
+            producto_filtrado = df[df["id"] == producto_id]
+            if producto_filtrado.empty:
+                st.error(f"❌ Producto con ID '{producto_id}' no encontrado")
+                st.stop()
+            
+            producto = producto_filtrado.iloc[0]
             
             col1, col2 = st.columns(2)
             
