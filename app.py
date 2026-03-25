@@ -216,14 +216,14 @@ def agregar_producto(id, nombre, cantidad, precio, ubicacion):
             """INSERT INTO productos 
                (id, nombre, cantidad, precio, ubicacion, creado_en, actualizado_en)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (id, nombre.strip(), int(cantidad), float(precio), ubicacion.strip(), ahora, ahora)
+            (str(id), str(nombre).strip(), int(cantidad), float(precio), str(ubicacion).strip(), str(ahora), str(ahora))
         )
         
         c.execute(
             """INSERT INTO movimientos 
                (producto_id, tipo, cantidad, fecha, descripcion)
                VALUES (?, ?, ?, ?, ?)""",
-            (id, "entrada", int(cantidad), ahora, "Entrada inicial")
+            (str(id), "entrada", int(cantidad), str(ahora), "Entrada inicial")
         )
         
         conn.commit()
@@ -244,7 +244,9 @@ def actualizar_stock(producto_id, cantidad, descripcion=""):
         if df_producto.empty or len(df_producto) == 0:
             return False, "❌ Producto no encontrado"
         
-        stock_actual = df_producto["cantidad"].iloc[0]
+        # Asegurar que stock_actual sea un entero
+        stock_actual = int(df_producto["cantidad"].iloc[0])
+        cantidad = int(cantidad)
         nuevo_stock = stock_actual + cantidad
         
         if nuevo_stock < 0:
@@ -252,9 +254,10 @@ def actualizar_stock(producto_id, cantidad, descripcion=""):
         
         ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
+        # Asegurar tipos correctos para la consulta
         c.execute(
             "UPDATE productos SET cantidad = ?, actualizado_en = ? WHERE id = ?",
-            (nuevo_stock, ahora, producto_id)
+            (int(nuevo_stock), str(ahora), str(producto_id))
         )
         
         tipo = "entrada" if cantidad > 0 else "salida"
@@ -262,7 +265,7 @@ def actualizar_stock(producto_id, cantidad, descripcion=""):
             """INSERT INTO movimientos 
                (producto_id, tipo, cantidad, fecha, descripcion)
                VALUES (?, ?, ?, ?, ?)""",
-            (producto_id, tipo, abs(cantidad), ahora, descripcion)
+            (str(producto_id), str(tipo), int(abs(cantidad)), str(ahora), str(descripcion))
         )
         
         conn.commit()
@@ -278,7 +281,7 @@ def actualizar_precio(producto_id, nuevo_precio):
         ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         c.execute(
             "UPDATE productos SET precio = ?, actualizado_en = ? WHERE id = ?",
-            (float(nuevo_precio), ahora, producto_id)
+            (float(nuevo_precio), str(ahora), str(producto_id))
         )
         conn.commit()
         st.cache_data.clear()
@@ -292,11 +295,11 @@ def actualizar_nombre(producto_id, nuevo_nombre):
         ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         c.execute(
             "UPDATE productos SET nombre = ?, actualizado_en = ? WHERE id = ?",
-            (nuevo_nombre.strip(), ahora, producto_id)
+            (str(nuevo_nombre).strip(), str(ahora), str(producto_id))
         )
         conn.commit()
         st.cache_data.clear()
-        return True, f"✅ Nombre actualizado a '{nuevo_nombre.strip()}'"
+        return True, f"✅ Nombre actualizado a '{str(nuevo_nombre).strip()}'"
     except Exception as e:
         return False, f"❌ Error al actualizar nombre: {str(e)}"
 
@@ -306,11 +309,11 @@ def actualizar_ubicacion(producto_id, nueva_ubicacion):
         ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         c.execute(
             "UPDATE productos SET ubicacion = ?, actualizado_en = ? WHERE id = ?",
-            (nueva_ubicacion.strip(), ahora, producto_id)
+            (str(nueva_ubicacion).strip(), str(ahora), str(producto_id))
         )
         conn.commit()
         st.cache_data.clear()
-        return True, f"✅ Ubicación actualizada a '{nueva_ubicacion.strip()}'"
+        return True, f"✅ Ubicación actualizada a '{str(nueva_ubicacion).strip()}'"
     except Exception as e:
         return False, f"❌ Error al actualizar ubicación: {str(e)}"
 
