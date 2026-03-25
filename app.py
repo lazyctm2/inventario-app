@@ -268,15 +268,19 @@ def actualizar_stock(producto_id, cantidad, descripcion=""):
     except Exception as e:
         return False, f"❌ Error al actualizar stock: {str(e)}"
 
-def eliminar_producto(producto_id):
-    """Elimina un producto y todos sus movimientos"""
+def actualizar_precio(producto_id, nuevo_precio):
+    """Actualiza el precio de un producto"""
     try:
-        c.execute("DELETE FROM productos WHERE id = ?", (producto_id,))
+        ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        c.execute(
+            "UPDATE productos SET precio = ?, actualizado_en = ? WHERE id = ?",
+            (float(nuevo_precio), ahora, producto_id)
+        )
         conn.commit()
         st.cache_data.clear()
-        return True, "✅ Producto eliminado exitosamente"
+        return True, f"✅ Precio actualizado a ${float(nuevo_precio):.2f}"
     except Exception as e:
-        return False, f"❌ Error al eliminar: {str(e)}"
+        return False, f"❌ Error al actualizar precio: {str(e)}"
 
 def obtener_movimientos_producto(producto_id):
     """Obtiene historial de movimientos de un producto"""
@@ -838,7 +842,7 @@ elif pagina == "⚙️ Gestión":
         tab1, tab2 = st.tabs(["✏️ Editar", "🗑️ Eliminar"])
         
         with tab1:
-            st.info("💡 Selecciona un producto para ver su historial")
+            st.info("💡 Selecciona un producto para editar su precio")
             
             producto_id = st.selectbox(
                 "Producto",
@@ -855,17 +859,39 @@ elif pagina == "⚙️ Gestión":
                 st.write("**Información del producto**")
                 st.write(f"🆔 **ID:** {producto['id']}")
                 st.write(f"📝 **Nombre:** {producto['nombre']}")
-                st.write(f"💵 **Precio:** ${producto['precio']:.2f}")
+                st.write(f"💵 **Precio actual:** ${producto['precio']:.2f}")
                 st.write(f"📍 **Ubicación:** {producto['ubicacion']}")
                 st.write(f"📦 **Stock actual:** {int(producto['cantidad'])} unidades")
             
             with col2:
+                st.write("**✏️ Modificar precio**")
+                
+                nuevo_precio = st.number_input(
+                    "Nuevo precio ($)",
+                    min_value=0.01,
+                    value=float(producto['precio']),
+                    step=0.01,
+                    format="%.2f",
+                    key="nuevo_precio"
+                )
+                
+                if st.button("💾 Actualizar precio", use_container_width=True, type="primary"):
+                    if nuevo_precio != producto['precio']:
+                        exito, mensaje = actualizar_precio(producto_id, nuevo_precio)
+                        if exito:
+                            st.success(mensaje)
+                            st.rerun()
+                        else:
+                            st.error(mensaje)
+                    else:
+                        st.warning("⚠️ El precio no ha cambiado")
+                
                 st.write("**Historial reciente**")
                 mov_producto = obtener_movimientos_producto(producto_id)
                 
                 if not mov_producto.empty:
                     st.dataframe(
-                        mov_producto.head(5)[[
+                        mov_producto.head(3)[[
                             "tipo", "cantidad", "fecha"
                         ]],
                         use_container_width=True,
