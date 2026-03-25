@@ -282,6 +282,34 @@ def actualizar_precio(producto_id, nuevo_precio):
     except Exception as e:
         return False, f"❌ Error al actualizar precio: {str(e)}"
 
+def actualizar_nombre(producto_id, nuevo_nombre):
+    """Actualiza el nombre de un producto"""
+    try:
+        ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        c.execute(
+            "UPDATE productos SET nombre = ?, actualizado_en = ? WHERE id = ?",
+            (nuevo_nombre.strip(), ahora, producto_id)
+        )
+        conn.commit()
+        st.cache_data.clear()
+        return True, f"✅ Nombre actualizado a '{nuevo_nombre.strip()}'"
+    except Exception as e:
+        return False, f"❌ Error al actualizar nombre: {str(e)}"
+
+def actualizar_ubicacion(producto_id, nueva_ubicacion):
+    """Actualiza la ubicación de un producto"""
+    try:
+        ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        c.execute(
+            "UPDATE productos SET ubicacion = ?, actualizado_en = ? WHERE id = ?",
+            (nueva_ubicacion.strip(), ahora, producto_id)
+        )
+        conn.commit()
+        st.cache_data.clear()
+        return True, f"✅ Ubicación actualizada a '{nueva_ubicacion.strip()}'"
+    except Exception as e:
+        return False, f"❌ Error al actualizar ubicación: {str(e)}"
+
 def obtener_movimientos_producto(producto_id):
     """Obtiene historial de movimientos de un producto"""
     return pd.read_sql(
@@ -842,7 +870,7 @@ elif pagina == "⚙️ Gestión":
         tab1, tab2 = st.tabs(["✏️ Editar", "🗑️ Eliminar"])
         
         with tab1:
-            st.info("💡 Selecciona un producto para editar su precio")
+            st.info("💡 Selecciona un producto para editar sus propiedades")
             
             producto_id = st.selectbox(
                 "Producto",
@@ -856,16 +884,25 @@ elif pagina == "⚙️ Gestión":
             col1, col2 = st.columns(2)
             
             with col1:
-                st.write("**Información del producto**")
+                st.write("**Información actual del producto**")
                 st.write(f"🆔 **ID:** {producto['id']}")
                 st.write(f"📝 **Nombre:** {producto['nombre']}")
-                st.write(f"💵 **Precio actual:** ${producto['precio']:.2f}")
+                st.write(f"💵 **Precio:** ${producto['precio']:.2f}")
                 st.write(f"📍 **Ubicación:** {producto['ubicacion']}")
                 st.write(f"📦 **Stock actual:** {int(producto['cantidad'])} unidades")
             
             with col2:
-                st.write("**✏️ Modificar precio**")
+                st.write("**✏️ Editar propiedades**")
                 
+                # Editar nombre
+                nuevo_nombre = st.text_input(
+                    "Nuevo nombre",
+                    value=producto['nombre'],
+                    key="nuevo_nombre",
+                    help="Deja vacío para mantener el nombre actual"
+                )
+                
+                # Editar precio
                 nuevo_precio = st.number_input(
                     "Nuevo precio ($)",
                     min_value=0.01,
@@ -875,16 +912,58 @@ elif pagina == "⚙️ Gestión":
                     key="nuevo_precio"
                 )
                 
-                if st.button("💾 Actualizar precio", use_container_width=True, type="primary"):
-                    if nuevo_precio != producto['precio']:
-                        exito, mensaje = actualizar_precio(producto_id, nuevo_precio)
-                        if exito:
-                            st.success(mensaje)
-                            st.rerun()
+                # Editar ubicación
+                nueva_ubicacion = st.text_input(
+                    "Nueva ubicación",
+                    value=producto['ubicacion'],
+                    key="nueva_ubicacion",
+                    help="Deja vacío para mantener la ubicación actual"
+                )
+                
+                # Botones de actualización
+                col_btn1, col_btn2, col_btn3 = st.columns(3)
+                
+                cambios_realizados = False
+                
+                with col_btn1:
+                    if st.button("📝 Nombre", use_container_width=True):
+                        if nuevo_nombre and nuevo_nombre != producto['nombre']:
+                            exito, mensaje = actualizar_nombre(producto_id, nuevo_nombre)
+                            if exito:
+                                st.success(mensaje)
+                                cambios_realizados = True
+                            else:
+                                st.error(mensaje)
                         else:
-                            st.error(mensaje)
-                    else:
-                        st.warning("⚠️ El precio no ha cambiado")
+                            st.warning("⚠️ Nombre no válido o sin cambios")
+                
+                with col_btn2:
+                    if st.button("💵 Precio", use_container_width=True):
+                        if nuevo_precio != producto['precio']:
+                            exito, mensaje = actualizar_precio(producto_id, nuevo_precio)
+                            if exito:
+                                st.success(mensaje)
+                                cambios_realizados = True
+                            else:
+                                st.error(mensaje)
+                        else:
+                            st.warning("⚠️ Precio sin cambios")
+                
+                with col_btn3:
+                    if st.button("📍 Ubicación", use_container_width=True):
+                        if nueva_ubicacion and nueva_ubicacion != producto['ubicacion']:
+                            exito, mensaje = actualizar_ubicacion(producto_id, nueva_ubicacion)
+                            if exito:
+                                st.success(mensaje)
+                                cambios_realizados = True
+                            else:
+                                st.error(mensaje)
+                        else:
+                            st.warning("⚠️ Ubicación no válida o sin cambios")
+                
+                if cambios_realizados:
+                    st.info("🔄 Recargando datos...")
+                    st.rerun()
                 
                 st.write("**Historial reciente**")
                 mov_producto = obtener_movimientos_producto(producto_id)
