@@ -438,16 +438,20 @@ if not st.session_state.autenticado:
     
     st.stop()
 
-st.divider()
+# Contenedor principal para mantener consistencia del DOM
+main_container = st.container()
 
-# ==================== SIDEBAR ====================
-with st.sidebar:
-    st.title("⚙️ Navegación")
-    
-    pagina = st.radio(
-        "Selecciona sección:",
-        [
-            "📊 Dashboard",
+with main_container:
+    st.divider()
+
+    # ==================== SIDEBAR ====================
+    with st.sidebar:
+        st.title("⚙️ Navegación")
+        
+        pagina = st.radio(
+            "Selecciona sección:",
+            [
+                "📊 Dashboard",
             "➕ Agregar producto",
             "🔄 Movimientos",
             "📜 Kardex",
@@ -562,7 +566,6 @@ elif pagina == "➕ Agregar producto":
         st.write("**Stock inicial**")
         cantidad = st.number_input("📦 Cantidad inicial", min_value=0, step=1)
         ubicacion = st.text_input("📍 Ubicación", placeholder="Ej: Almacén A")
-        st.empty()
     
     col1, col2 = st.columns(2)
     
@@ -672,9 +675,6 @@ elif pagina == "📜 Kardex":
                 ["TODOS", "entrada", "salida"],
                 key="kardex_tipo"
             )
-        
-        with col3:
-            st.empty()
         
         # Filtrar datos
         df_filtrado = mov.copy()
