@@ -69,6 +69,70 @@ c.execute("CREATE INDEX IF NOT EXISTS idx_movimientos_tipo ON movimientos(tipo)"
 
 conn.commit()
 
+# ==================== DATABASE MIGRATIONS ====================
+def migrar_base_datos():
+    """Migra la base de datos a la versión más reciente"""
+    try:
+        # Verificar y agregar columnas faltantes en productos
+        c.execute("PRAGMA table_info(productos)")
+        columns = [row[1] for row in c.fetchall()]
+        
+        if "creado_en" not in columns:
+            c.execute("ALTER TABLE productos ADD COLUMN creado_en TEXT")
+            st.info("✅ Migración: Agregada columna 'creado_en' a tabla productos")
+        
+        if "actualizado_en" not in columns:
+            c.execute("ALTER TABLE productos ADD COLUMN actualizado_en TEXT")
+            st.info("✅ Migración: Agregada columna 'actualizado_en' a tabla productos")
+        
+        # Verificar y agregar columnas faltantes en movimientos
+        c.execute("PRAGMA table_info(movimientos)")
+        columns = [row[1] for row in c.fetchall()]
+        
+        if "usuario" not in columns:
+            c.execute("ALTER TABLE movimientos ADD COLUMN usuario TEXT")
+            st.info("✅ Migración: Agregada columna 'usuario' a tabla movimientos")
+        
+        conn.commit()
+        
+    except Exception as e:
+        st.error(f"❌ Error en migración: {str(e)}")
+
+# Ejecutar migraciones
+migrar_base_datos()
+
+# ==================== POBLAR DATOS FALTANTES ====================
+def poblar_datos_faltantes():
+    """Pobla datos faltantes en columnas existentes"""
+    try:
+        ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Actualizar productos sin fecha de creación
+        c.execute(
+            "UPDATE productos SET creado_en = ? WHERE creado_en IS NULL OR creado_en = ''",
+            (ahora,)
+        )
+        
+        # Actualizar productos sin fecha de actualización
+        c.execute(
+            "UPDATE productos SET actualizado_en = ? WHERE actualizado_en IS NULL OR actualizado_en = ''",
+            (ahora,)
+        )
+        
+        conn.commit()
+        
+        # Verificar si se actualizaron registros
+        c.execute("SELECT COUNT(*) FROM productos WHERE creado_en = ?", (ahora,))
+        actualizados = c.fetchone()[0]
+        if actualizados > 0:
+            st.info(f"✅ Migración: Actualizados {actualizados} productos con fechas faltantes")
+            
+    except Exception as e:
+        st.warning(f"⚠️ Error al poblar datos faltantes: {str(e)}")
+
+# Poblar datos faltantes
+poblar_datos_faltantes()
+
 # ==================== CACHED FUNCTIONS ====================
 
 @st.cache_data(ttl=5)
